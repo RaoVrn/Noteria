@@ -2,14 +2,20 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Menu, X, Moon, Sun, User, LogOut, Bell, Search, Plus } from 'lucide-react'
 import { useApp } from '../contexts/AppContext'
+import { signOut } from '../supabaseClient'
 
 function Navbar() {
   const { state, dispatch } = useApp()
   const [showUserMenu, setShowUserMenu] = useState(false)
 
-  const handleLogout = () => {
-    dispatch({ type: 'SET_USER', payload: null })
-    setShowUserMenu(false)
+  const handleLogout = async () => {
+    try {
+      await signOut()
+      dispatch({ type: 'SET_USER', payload: null })
+      setShowUserMenu(false)
+    } catch (error) {
+      console.error('Logout error:', error)
+    }
   }
 
   const toggleTheme = () => {
@@ -20,95 +26,95 @@ function Navbar() {
     dispatch({ type: 'TOGGLE_SIDEBAR' })
   }
 
+  // Don't render anything if still loading
+  if (state.loading) {
+    return null
+  }
+
+  // If user is not logged in, show public navbar
   if (!state.user) {
     return (
-      <nav className="bg-white shadow-md px-6 py-4 flex justify-between items-center sticky top-0 z-50">
-        <Link to="/" className="text-2xl font-extrabold text-blue-600">Noteria</Link>
+      <nav className="bg-white dark:bg-gray-800 shadow-md px-6 py-4 flex justify-between items-center sticky top-0 z-50">
+        <Link to="/" className="text-2xl font-extrabold text-blue-600 dark:text-blue-400">
+          Noteria
+        </Link>
         <div className="space-x-4 text-sm font-medium">
-          <Link to="/" className="hover:text-blue-500">Home</Link>
-          <Link to="/login" className="hover:text-blue-500">Login</Link>
-          <Link to="/signup" className="hover:text-blue-500">Sign Up</Link>
+          <Link to="/" className="hover:text-blue-500 dark:text-gray-200 dark:hover:text-blue-400">
+            Home
+          </Link>
+          <Link to="/login" className="hover:text-blue-500 dark:text-gray-200 dark:hover:text-blue-400">
+            Login
+          </Link>
+          <Link to="/signup" className="hover:text-blue-500 dark:text-gray-200 dark:hover:text-blue-400">
+            Sign Up
+          </Link>
         </div>
       </nav>
     )
   }
 
+  // User is logged in, show authenticated navbar
   return (
-    <nav className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex justify-between items-center">
+    <nav className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 px-6 py-3 flex justify-between items-center sticky top-0 z-50">
       <div className="flex items-center space-x-4">
         <button
           onClick={toggleSidebar}
-          className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+          className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
         >
-          <Menu size={20} />
+          <Menu className="h-5 w-5 text-gray-600 dark:text-gray-300" />
         </button>
         
-        <h1 className="text-xl font-bold text-gray-900 dark:text-white">
-          Welcome back, {state.user.name}
-        </h1>
-      </div>
-
-      <div className="flex-1 max-w-lg mx-6">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-          <input
-            type="text"
-            placeholder="Search notes..."
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-          />
-        </div>
+        <Link to="/dashboard" className="text-xl font-bold text-gray-900 dark:text-white">
+          Noteria
+        </Link>
       </div>
 
       <div className="flex items-center space-x-4">
-        {/* Add Note Button */}
-        <button className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">
-          <Plus size={20} />
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search notes..."
+            className="pl-10 pr-4 py-2 bg-gray-100 dark:bg-gray-700 border-0 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 dark:text-white"
+          />
+        </div>
+
+        <button className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+          <Bell className="h-5 w-5 text-gray-600 dark:text-gray-300" />
         </button>
 
-        {/* Theme Toggle */}
         <button
           onClick={toggleTheme}
-          className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+          className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
         >
-          {state.darkMode ? <Sun size={20} /> : <Moon size={20} />}
+          {state.darkMode ? (
+            <Sun className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+          ) : (
+            <Moon className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+          )}
         </button>
 
-        {/* Notifications */}
-        <button className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors relative">
-          <Bell size={20} />
-          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-            0
-          </span>
-        </button>
-
-        {/* User Menu */}
         <div className="relative">
           <button
             onClick={() => setShowUserMenu(!showUserMenu)}
-            className="flex items-center space-x-2 p-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+            className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
           >
-            <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white font-medium">
-              {state.user.name.charAt(0).toUpperCase()}
+            <div className="h-8 w-8 bg-blue-500 rounded-full flex items-center justify-center">
+              <User className="h-4 w-4 text-white" />
             </div>
-            <span className="text-sm font-medium">{state.user.name}</span>
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
+              {state.user?.email?.split('@')[0] || 'User'}
+            </span>
           </button>
 
           {showUserMenu && (
             <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1">
-              <Link
-                to="/profile"
-                className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-                onClick={() => setShowUserMenu(false)}
-              >
-                <User size={16} className="mr-3" />
-                Profile
-              </Link>
               <button
                 onClick={handleLogout}
-                className="flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                className="flex items-center space-x-2 w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
               >
-                <LogOut size={16} className="mr-3" />
-                Logout
+                <LogOut className="h-4 w-4" />
+                <span>Sign out</span>
               </button>
             </div>
           )}

@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { 
   ChevronRight, 
   ChevronDown, 
@@ -10,283 +10,215 @@ import {
   Settings,
   Search,
   Home
-} from 'lucide-react'
-import { useApp } from '../contexts/AppContext'
+} from 'lucide-react';
+import { useApp } from '../contexts/AppContext';
+import { createSpace, createSubspace } from '../supabaseClient';
 
 const Sidebar = ({ collapsed }) => {
-  const { state, dispatch } = useApp()
-  const [expandedSpaces, setExpandedSpaces] = useState(new Set())
-  const [searchTerm, setSearchTerm] = useState('')
-  const [showAddSpaceModal, setShowAddSpaceModal] = useState(false)
-  const [showAddSubspaceModal, setShowAddSubspaceModal] = useState(false)
-  const [newSpaceName, setNewSpaceName] = useState('')
-  const [newSpaceEmoji, setNewSpaceEmoji] = useState('📁')
-  const [newSubspaceName, setNewSubspaceName] = useState('')
-  const [newSubspaceEmoji, setNewSubspaceEmoji] = useState('📄')
-  const [selectedSpaceId, setSelectedSpaceId] = useState(null)
-  const location = useLocation()
+  const { state, dispatch } = useApp();
+  const [expandedSpaces, setExpandedSpaces] = useState(new Set());
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showAddSpaceModal, setShowAddSpaceModal] = useState(false);
+  const [newSpaceName, setNewSpaceName] = useState('');
+  const [newSpaceEmoji, setNewSpaceEmoji] = useState('📁');
+  const [isLoading, setIsLoading] = useState(false);
+  const location = useLocation();
 
   const toggleSpace = (spaceId) => {
-    const newExpanded = new Set(expandedSpaces)
+    const newExpanded = new Set(expandedSpaces);
     if (newExpanded.has(spaceId)) {
-      newExpanded.delete(spaceId)
+      newExpanded.delete(spaceId);
     } else {
-      newExpanded.add(spaceId)
+      newExpanded.add(spaceId);
     }
-    setExpandedSpaces(newExpanded)
-  }
+    setExpandedSpaces(newExpanded);
+  };
 
-  const handleAddSpace = () => {
-    if (newSpaceName.trim()) {
-      const newSpace = {
-        id: newSpaceName.toLowerCase().replace(/\s+/g, '-'),
-        name: newSpaceName,
-        emoji: newSpaceEmoji,
-        subSpaces: []
+  const handleAddSpace = async () => {
+    if (!newSpaceName.trim()) return;
+    
+    setIsLoading(true);
+    try {
+      const { data, error } = await createSpace(
+        state.user.id,
+        newSpaceName.trim(),
+        newSpaceEmoji
+      );
+
+      if (error) throw error;
+
+      if (data && data[0]) {
+        dispatch({ type: 'ADD_SPACE', payload: data[0] });
+        setNewSpaceName('');
+        setNewSpaceEmoji('📁');
+        setShowAddSpaceModal(false);
       }
-      dispatch({ type: 'ADD_SPACE', payload: newSpace })
-      setNewSpaceName('')
-      setNewSpaceEmoji('📁')
-      setShowAddSpaceModal(false)
+    } catch (error) {
+      console.error('Error creating space:', error);
+    } finally {
+      setIsLoading(false);
     }
-  }
+  };
 
-  const handleAddSubspace = () => {
-    if (newSubspaceName.trim() && selectedSpaceId) {
-      const newSubSpace = {
-        id: newSubspaceName.toLowerCase().replace(/\s+/g, '-'),
-        name: newSubspaceName,
-        emoji: newSubspaceEmoji
-      }
-      dispatch({ 
-        type: 'ADD_SUBSPACE', 
-        payload: { 
-          spaceId: selectedSpaceId, 
-          subSpace: newSubSpace 
-        }
-      })
-      setNewSubspaceName('')
-      setNewSubspaceEmoji('📄')
-      setSelectedSpaceId(null)
-      setShowAddSubspaceModal(false)
-      // Expand the space to show the new subspace
-      setExpandedSpaces(prev => new Set([...prev, selectedSpaceId]))
-    }
-  }
-
-  const openAddSubspaceModal = (spaceId) => {
-    setSelectedSpaceId(spaceId)
-    setShowAddSubspaceModal(true)
-  }
-
-  const filteredSpaces = state.spaces.filter(space => 
-    space.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    space.subSpaces?.some(subspace => 
-      subspace.name.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-  )
+  const filteredSpaces = state.spaces?.filter(space => 
+    space.name.toLowerCase().includes(searchTerm.toLowerCase())
+  ) || [];
 
   if (collapsed) {
     return (
-      <div className="w-16 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 flex flex-col items-center py-4 space-y-4">
-        <Link
-          to="/dashboard"
-          className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-          title="Dashboard"
-        >
-          <Home className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+      <div className="w-16 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col items-center py-4 space-y-4">
+        <Link to="/dashboard" className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+          <Home className="h-5 w-5 text-gray-600 dark:text-gray-300" />
         </Link>
-        {state.spaces.map(space => (
-          <Link
-            key={space.id}
-            to={`/space/${space.id}`}
-            className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-            title={space.name}
-          >
-            <span className="text-lg">{space.emoji}</span>
-          </Link>
-        ))}
-        <button
+        <button 
           onClick={() => setShowAddSpaceModal(true)}
-          className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border-2 border-dashed border-gray-300 dark:border-gray-600"
-          title="Add Space"
+          className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
         >
-          <Plus className="w-4 h-4 text-gray-400" />
+          <Plus className="h-5 w-5 text-gray-600 dark:text-gray-300" />
         </button>
       </div>
-    )
+    );
   }
 
   return (
     <>
-      <div className="w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 flex flex-col h-full">
+      <div className="w-80 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col h-full">
         {/* Header */}
         <div className="p-4 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Noteria</h2>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Spaces</h2>
             <button
               onClick={() => setShowAddSpaceModal(true)}
-              className="p-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded"
+              className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
             >
-              <Plus size={18} />
+              <Plus className="h-4 w-4 text-gray-600 dark:text-gray-300" />
             </button>
           </div>
           
           {/* Search */}
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
             <input
               type="text"
               placeholder="Search spaces..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+              className="w-full pl-10 pr-4 py-2 bg-gray-100 dark:bg-gray-700 border-0 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 dark:text-white"
             />
           </div>
         </div>
 
         {/* Navigation */}
-        <div className="flex-1 overflow-y-auto">
-          <nav className="p-2">
-            {/* Dashboard Link */}
-            <Link
-              to="/dashboard"
-              className={`flex items-center px-3 py-2 rounded-lg mb-2 transition-colors ${
-                location.pathname === '/dashboard'
-                  ? 'bg-blue-100 dark:bg-blue-900 text-blue-900 dark:text-blue-100'
-                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
-              }`}
-            >
-              <Home size={18} className="mr-3" />
-              Dashboard
-            </Link>
+        <div className="flex-1 overflow-y-auto p-4">
+          {/* Dashboard Link */}
+          <Link
+            to="/dashboard"
+            className={`flex items-center space-x-3 p-2 rounded-lg mb-4 transition-colors ${
+              location.pathname === '/dashboard'
+                ? 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300'
+                : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200'
+            }`}
+          >
+            <Home className="h-5 w-5" />
+            <span className="font-medium">Dashboard</span>
+          </Link>
 
-            {/* Spaces */}
-            <div className="mt-4">
-              <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
-                Spaces
-              </h3>
-              
-              {filteredSpaces.map(space => (
-                <div key={space.id} className="mb-1">
+          {/* Spaces */}
+          <div className="space-y-1">
+            {filteredSpaces.map((space) => {
+              const isExpanded = expandedSpaces.has(space.id);
+              const hasSubspaces = space.subspaces && space.subspaces.length > 0;
+              const isActive = location.pathname.includes(`/space/${space.id}`);
+
+              return (
+                <div key={space.id} className="space-y-1">
                   <div className="flex items-center group">
                     <button
                       onClick={() => toggleSpace(space.id)}
-                      className="flex items-center flex-1 px-3 py-2 text-left rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                      className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
+                      disabled={!hasSubspaces}
                     >
-                      {expandedSpaces.has(space.id) ? (
-                        <ChevronDown size={16} className="mr-2 text-gray-400" />
+                      {hasSubspaces ? (
+                        isExpanded ? (
+                          <ChevronDown className="h-4 w-4 text-gray-400" />
+                        ) : (
+                          <ChevronRight className="h-4 w-4 text-gray-400" />
+                        )
                       ) : (
-                        <ChevronRight size={16} className="mr-2 text-gray-400" />
+                        <div className="h-4 w-4" />
                       )}
-                      <span className="mr-2 text-lg">{space.emoji}</span>
-                      <span className="text-sm text-gray-900 dark:text-white truncate">
-                        {space.name}
-                      </span>
                     </button>
-                    <button
-                      onClick={() => openAddSubspaceModal(space.id)}
-                      className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-opacity"
+                    
+                    <Link
+                      to={`/space/${space.id}`}
+                      className={`flex-1 flex items-center space-x-2 p-2 rounded-lg transition-colors ${
+                        isActive && !location.pathname.includes('/subspace/')
+                          ? 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300'
+                          : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200'
+                      }`}
                     >
-                      <Plus size={14} />
-                    </button>
+                      <span className="text-lg">{space.emoji || '📁'}</span>
+                      <span className="font-medium truncate">{space.name}</span>
+                      <span className="text-xs text-gray-400 ml-auto">
+                        {space.notes?.length || 0}
+                      </span>
+                    </Link>
                   </div>
 
-                  {/* Space Notes and Subspaces */}
-                  {expandedSpaces.has(space.id) && (
-                    <div className="ml-6 mt-1">
-                      <Link
-                        to={`/space/${space.id}`}
-                        className={`flex items-center px-3 py-1 rounded text-sm transition-colors ${
-                          location.pathname === `/space/${space.id}`
-                            ? 'bg-blue-50 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
-                            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
-                        }`}
-                      >
-                        <BookOpen size={14} className="mr-2" />
-                        Notes ({state.notes[space.id]?.length || 0})
-                      </Link>
-
-                      {/* Subspaces */}
-                      {space.subSpaces?.map(subspace => {
-                        const noteCount = state.notes[`${space.id}-${subspace.id}`]?.length || 0
+                  {/* Subspaces */}
+                  {isExpanded && hasSubspaces && (
+                    <div className="ml-6 space-y-1">
+                      {space.subspaces.map((subspace) => {
+                        const isSubspaceActive = location.pathname === `/space/${space.id}/subspace/${subspace.id}`;
+                        
                         return (
                           <Link
                             key={subspace.id}
                             to={`/space/${space.id}/subspace/${subspace.id}`}
-                            className={`flex items-center px-3 py-1 rounded text-sm mt-1 transition-colors ${
-                              location.pathname === `/space/${space.id}/subspace/${subspace.id}`
-                                ? 'bg-blue-50 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
-                                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
+                            className={`flex items-center space-x-2 p-2 rounded-lg transition-colors ${
+                              isSubspaceActive
+                                ? 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300'
+                                : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300'
                             }`}
                           >
-                            <span className="mr-2">{subspace.emoji}</span>
-                            {subspace.name} ({noteCount})
+                            <span className="text-sm">{subspace.emoji || '📄'}</span>
+                            <span className="text-sm truncate">{subspace.name}</span>
+                            <span className="text-xs text-gray-400 ml-auto">
+                              {subspace.notes?.length || 0}
+                            </span>
                           </Link>
-                        )
+                        );
                       })}
                     </div>
                   )}
                 </div>
-              ))}
-
-              {filteredSpaces.length === 0 && (
-                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                  {searchTerm ? 'No spaces found' : 'No spaces yet'}
-                  {!searchTerm && (
-                    <button
-                      onClick={() => setShowAddSpaceModal(true)}
-                      className="block mx-auto mt-2 text-blue-500 hover:text-blue-600 text-sm"
-                    >
-                      Create your first space
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-          </nav>
-        </div>
-
-        {/* Footer */}
-        <div className="p-4 border-t border-gray-200 dark:border-gray-700">
-          <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1 mb-3">
-            <div className="flex justify-between">
-              <span>Total Spaces:</span>
-              <span>{state.spaces.length}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Total Notes:</span>
-              <span>{Object.values(state.notes).flat().length}</span>
-            </div>
+              );
+            })}
           </div>
-          <button className="flex items-center w-full px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">
-            <Settings size={16} className="mr-3" />
-            Settings
-          </button>
+
+          {filteredSpaces.length === 0 && !searchTerm && (
+            <div className="text-center py-8">
+              <Folder className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-500 dark:text-gray-400 text-sm">No spaces yet</p>
+              <button
+                onClick={() => setShowAddSpaceModal(true)}
+                className="mt-2 text-blue-600 dark:text-blue-400 text-sm hover:underline"
+              >
+                Create your first space
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Add Space Modal */}
       {showAddSpaceModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-96 max-w-sm mx-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-96">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
               Create New Space
             </h3>
             <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Emoji
-                </label>
-                <input
-                  type="text"
-                  value={newSpaceEmoji}
-                  onChange={(e) => setNewSpaceEmoji(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                  placeholder="📁"
-                  maxLength={2}
-                />
-              </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Space Name
@@ -295,87 +227,47 @@ const Sidebar = ({ collapsed }) => {
                   type="text"
                   value={newSpaceName}
                   onChange={(e) => setNewSpaceName(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                  placeholder="e.g., Web Development"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                  placeholder="Enter space name"
                 />
               </div>
-            </div>
-            <div className="flex justify-end space-x-3 mt-6">
-              <button
-                onClick={() => setShowAddSpaceModal(false)}
-                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleAddSpace}
-                className="px-4 py-2 text-sm font-medium bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-              >
-                Create Space
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Add Subspace Modal */}
-      {showAddSubspaceModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-96 max-w-sm mx-4">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-              Create New Subspace
-            </h3>
-            <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Emoji
                 </label>
                 <input
                   type="text"
-                  value={newSubspaceEmoji}
-                  onChange={(e) => setNewSubspaceEmoji(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                  placeholder="📄"
-                  maxLength={2}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Subspace Name
-                </label>
-                <input
-                  type="text"
-                  value={newSubspaceName}
-                  onChange={(e) => setNewSubspaceName(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                  placeholder="e.g., React Components"
+                  value={newSpaceEmoji}
+                  onChange={(e) => setNewSpaceEmoji(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                  placeholder="📁"
                 />
               </div>
             </div>
             <div className="flex justify-end space-x-3 mt-6">
               <button
                 onClick={() => {
-                  setShowAddSubspaceModal(false)
-                  setSelectedSpaceId(null)
-                  setNewSubspaceName('')
-                  setNewSubspaceEmoji('📄')
+                  setShowAddSpaceModal(false);
+                  setNewSpaceName('');
+                  setNewSpaceEmoji('📁');
                 }}
-                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+                className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
               >
                 Cancel
               </button>
               <button
-                onClick={handleAddSubspace}
-                className="px-4 py-2 text-sm font-medium bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                onClick={handleAddSpace}
+                disabled={!newSpaceName.trim() || isLoading}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
               >
-                Create Subspace
+                {isLoading ? 'Creating...' : 'Create Space'}
               </button>
             </div>
           </div>
         </div>
       )}
     </>
-  )
-}
+  );
+};
 
-export default Sidebar
+export default Sidebar;

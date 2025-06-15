@@ -1,76 +1,96 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
+import { supabase } from '../supabaseClient';
 
 const AppContext = createContext();
 
 const initialState = {
   user: null,
   spaces: [],
-  notes: {}
+  notes: {},
+  darkMode: localStorage.getItem('darkMode') === 'true',
+  sidebarCollapsed: false,
+  loading: true,
+  error: null
 };
 
 function appReducer(state, action) {
   switch (action.type) {
     case 'SET_USER':
-      return { ...state, user: action.payload };
+      return { ...state, user: action.payload, loading: false };
     
-    case 'ADD_SPACE':
-      return {
-        ...state,
-        spaces: [...state.spaces, action.payload]
-      };
+    case 'SET_LOADING':
+      return { ...state, loading: action.payload };
+
+    case 'SET_ERROR':
+      return { ...state, error: action.payload, loading: false };
     
-    case 'ADD_SUBSPACE':
-      return {
-        ...state,
-        spaces: state.spaces.map(space =>
-          space.id === action.payload.spaceId
-            ? { ...space, subSpaces: [...space.subSpaces, action.payload.subSpace] }
-            : space
-        )
-      };
+    case 'SET_SPACES':
+      return { ...state, spaces: action.payload };
     
-    case 'ADD_NOTE':
-      const key = `${action.payload.spaceId}-${action.payload.subSpaceId}`;
-      return {
-        ...state,
-        notes: {
-          ...state.notes,
-          [key]: [...(state.notes[key] || []), action.payload.note]
+    case 'ADD_SPACE': {
+      const newSpaces = [...state.spaces, action.payload];
+      return { ...state, spaces: newSpaces };
+    }
+    
+    case 'ADD_SUBSPACE': {
+      const newSpaces = state.spaces.map(space => {
+        if (space.id === action.payload.spaceId) {
+          return {
+            ...space,
+            subspaces: [...(space.subspaces || []), action.payload.subspace]
+          };
         }
-      };
+        return space;
+      });
+      return { ...state, spaces: newSpaces };
+    }
     
-    case 'UPDATE_NOTE':
-      const updateKey = `${action.payload.spaceId}-${action.payload.subSpaceId}`;
-      return {
-        ...state,
-        notes: {
-          ...state.notes,
-          [updateKey]: state.notes[updateKey].map(note =>
-            note.id === action.payload.noteId
-              ? { ...note, ...action.payload.updates, updatedAt: new Date().toISOString() }
-              : note
-          )
+    case 'ADD_NOTE': {
+      const newSpaces = state.spaces.map(space => {
+        if (space.id === action.payload.spaceId) {
+          return {
+            ...space,
+            notes: [...(space.notes || []), action.payload.note]
+          };
         }
-      };
+        return space;
+      });
+      return { ...state, spaces: newSpaces };
+    }
     
-    case 'DELETE_NOTE':
-      const deleteKey = `${action.payload.spaceId}-${action.payload.subSpaceId}`;
-      return {
-        ...state,
-        notes: {
-          ...state.notes,
-          [deleteKey]: state.notes[deleteKey].filter(note => note.id !== action.payload.noteId)
+    case 'UPDATE_NOTE': {
+      const newSpaces = state.spaces.map(space => {
+        if (space.id === action.payload.spaceId) {
+          return {
+            ...space,
+            notes: space.notes.map(note =>
+              note.id === action.payload.noteId ? action.payload.note : note
+            )
+          };
         }
-      };
+        return space;
+      });
+      return { ...state, spaces: newSpaces };
+    }
     
-    case 'SET_CURRENT_SPACE':
-      return { ...state, currentSpace: action.payload };
+    case 'DELETE_NOTE': {
+      const newSpaces = state.spaces.map(space => {
+        if (space.id === action.payload.spaceId) {
+          return {
+            ...space,
+            notes: space.notes.filter(note => note.id !== action.payload.noteId)
+          };
+        }
+        return space;
+      });
+      return { ...state, spaces: newSpaces };
+    }
     
-    case 'SET_CURRENT_SUBSPACE':
-      return { ...state, currentSubSpace: action.payload };
-    
-    case 'TOGGLE_DARK_MODE':
-      return { ...state, darkMode: !state.darkMode };
+    case 'TOGGLE_DARK_MODE': {
+      const newDarkMode = !state.darkMode;
+      localStorage.setItem('darkMode', newDarkMode.toString());
+      return { ...state, darkMode: newDarkMode };
+    }
     
     case 'TOGGLE_SIDEBAR':
       return { ...state, sidebarCollapsed: !state.sidebarCollapsed };
@@ -83,53 +103,75 @@ function appReducer(state, action) {
 export function AppProvider({ children }) {
   const [state, dispatch] = useReducer(appReducer, initialState);
 
-  // Clear initial local storage data on first load
+  // Initialize session
   useEffect(() => {
-    const isFirstLoad = !localStorage.getItem('noteria-initialized');
-    if (isFirstLoad) {
-      localStorage.removeItem('noteria-data');
-      localStorage.setItem('noteria-initialized', 'true');
-    }
-  }, []);
-
-  // Load data from localStorage on mount
-  useEffect(() => {
-    const savedData = localStorage.getItem('noteria-data');
-    if (savedData) {
+    const initializeSession = async () => {
       try {
-        const parsedData = JSON.parse(savedData);
-        Object.keys(parsedData).forEach(key => {
-          if (key === 'spaces') {
-            parsedData.spaces.forEach(space => {
-              dispatch({ type: 'ADD_SPACE', payload: space });
-            });
-          } else if (key === 'notes') {
-            Object.keys(parsedData.notes).forEach(noteKey => {
-              parsedData.notes[noteKey].forEach(note => {
-                const [spaceId, subSpaceId] = noteKey.split('-');
-                dispatch({
-                  type: 'ADD_NOTE',
-                  payload: { spaceId, subSpaceId, note }
-                });
-              });
-            });
-          }
-        });
+        dispatch({ type: 'SET_LOADING', payload: true });
+        
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) throw error;
+        
+        if (session?.user) {
+          dispatch({ type: 'SET_USER', payload: session.user });
+          await fetchUserData(session.user.id);
+        } else {
+          dispatch({ type: 'SET_LOADING', payload: false });
+        }
       } catch (error) {
-        console.error('Failed to load saved data:', error);
+        console.error('Session initialization error:', error);
+        dispatch({ type: 'SET_ERROR', payload: error.message });
       }
-    }
+    };
+
+    initializeSession();
   }, []);
 
-  // Save data to localStorage when state changes
+  // Listen for auth changes
   useEffect(() => {
-    const dataToSave = {
-      spaces: state.spaces,
-      notes: state.notes,
-      darkMode: state.darkMode
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (event === 'SIGNED_IN' && session?.user) {
+          dispatch({ type: 'SET_USER', payload: session.user });
+          await fetchUserData(session.user.id);
+        } else if (event === 'SIGNED_OUT') {
+          dispatch({ type: 'SET_USER', payload: null });
+          dispatch({ type: 'SET_SPACES', payload: [] });
+        }
+      }
+    );
+
+    return () => {
+      subscription.unsubscribe();
     };
-    localStorage.setItem('noteria-data', JSON.stringify(dataToSave));
-  }, [state.spaces, state.notes, state.darkMode]);
+  }, []);
+
+  // Fetch user data (spaces and notes)
+  const fetchUserData = async (userId) => {
+    try {
+      const { data: spaces, error: spacesError } = await supabase
+        .from('spaces')
+        .select(`
+          *,
+          subspaces (
+            *,
+            notes (*)
+          ),
+          notes (*)
+        `)
+        .eq('user_id', userId)
+        .order('created_at', { ascending: true });
+
+      if (spacesError) throw spacesError;
+
+      dispatch({ type: 'SET_SPACES', payload: spaces || [] });
+      dispatch({ type: 'SET_LOADING', payload: false });
+    } catch (error) {
+      console.error('Data fetch error:', error);
+      dispatch({ type: 'SET_ERROR', payload: error.message });
+    }
+  };
 
   // Apply dark mode to document
   useEffect(() => {
@@ -140,8 +182,14 @@ export function AppProvider({ children }) {
     }
   }, [state.darkMode]);
 
+  const value = {
+    state,
+    dispatch,
+    fetchUserData
+  };
+
   return (
-    <AppContext.Provider value={{ state, dispatch }}>
+    <AppContext.Provider value={value}>
       {children}
     </AppContext.Provider>
   );

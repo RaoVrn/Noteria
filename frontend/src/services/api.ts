@@ -6,6 +6,7 @@ import {
   Room,
   Note,
   CreateRoomRequest,
+  UpdateRoomRequest,
   RoomResponse,
   CreateNoteRequest,
   UpdateNoteRequest,
@@ -70,8 +71,24 @@ export const roomAPI = {
     return response.data.rooms;
   },
 
+  getByParent: async (parentRoomId?: string): Promise<Room[]> => {
+    const url = parentRoomId ? `/rooms/parent/${parentRoomId}` : '/rooms/root';
+    const response = await api.get(url);
+    return response.data.rooms;
+  },
+
+  getById: async (roomId: string): Promise<Room> => {
+    const response = await api.get(`/rooms/${roomId}`);
+    return response.data.room;
+  },
+
   create: async (data: CreateRoomRequest): Promise<RoomResponse> => {
     const response = await api.post('/rooms', data);
+    return response.data;
+  },
+
+  update: async (roomId: string, data: UpdateRoomRequest): Promise<RoomResponse> => {
+    const response = await api.put(`/rooms/${roomId}`, data);
     return response.data;
   },
 

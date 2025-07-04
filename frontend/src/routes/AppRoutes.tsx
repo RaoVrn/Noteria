@@ -4,6 +4,7 @@ import Home from '../pages/Home';
 import Login from '../pages/Login';
 import Signup from '../pages/Signup';
 import Dashboard from '../pages/Dashboard';
+import RoomView from '../pages/RoomView';
 import NotesPage from '../pages/NotesPage';
 import ProtectedRoute from '../components/ProtectedRoute';
 import { useAuth } from '../hooks/useAuth';
@@ -27,6 +28,14 @@ const AppRoutes: React.FC = () => {
         element={
           <ProtectedRoute>
             <Dashboard />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/room/:roomId" 
+        element={
+          <ProtectedRoute>
+            <RoomView />
           </ProtectedRoute>
         } 
       />

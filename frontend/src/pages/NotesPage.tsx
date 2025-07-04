@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Save, Plus, Trash2, FileText } from 'lucide-react';
 import { noteAPI, roomAPI } from '../services/api';
 import { Note, Room } from '../types/api';
@@ -7,7 +7,10 @@ import toast from 'react-hot-toast';
 
 const NotesPage: React.FC = () => {
   const { roomId } = useParams<{ roomId: string }>();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const noteId = searchParams.get('noteId');
+  
   const [room, setRoom] = useState<Room | null>(null);
   const [notes, setNotes] = useState<Note[]>([]);
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
@@ -38,27 +41,38 @@ const NotesPage: React.FC = () => {
     }
   }, [title, content, selectedNote]);
 
+  // Handle direct note access via noteId parameter
+  useEffect(() => {
+    if (noteId && notes.length > 0) {
+      const note = notes.find(n => n._id === noteId);
+      if (note) {
+        setSelectedNote(note);
+      }
+    }
+  }, [noteId, notes]);
+
   const loadRoomAndNotes = async () => {
     if (!roomId) return;
 
     try {
       setLoading(true);
-      const [roomsData, notesData] = await Promise.all([
-        roomAPI.getAll(),
+      const [roomData, notesData] = await Promise.all([
+        roomAPI.getById(roomId),
         noteAPI.getByRoom(roomId)
       ]);
       
-      const currentRoom = roomsData.find(r => r._id === roomId);
-      if (!currentRoom) {
-        toast.error('Room not found');
-        navigate('/dashboard');
-        return;
-      }
-      
-      setRoom(currentRoom);
+      setRoom(roomData);
       setNotes(notesData);
       
-      if (notesData.length > 0) {
+      // If there's a noteId in the URL, select that note, otherwise select the first one
+      if (noteId) {
+        const note = notesData.find(n => n._id === noteId);
+        if (note) {
+          setSelectedNote(note);
+        } else if (notesData.length > 0) {
+          setSelectedNote(notesData[0]);
+        }
+      } else if (notesData.length > 0) {
         setSelectedNote(notesData[0]);
       }
     } catch (error: any) {
@@ -158,11 +172,11 @@ const NotesPage: React.FC = () => {
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-4">
               <button
-                onClick={() => navigate('/dashboard')}
+                onClick={() => navigate(`/room/${roomId}`)}
                 className="flex items-center text-gray-600 hover:text-gray-900"
               >
                 <ArrowLeft className="h-5 w-5 mr-2" />
-                Back to Dashboard
+                Back to Room
               </button>
               <div className="h-6 border-l border-gray-300"></div>
               <h1 className="text-xl font-semibold text-gray-900">

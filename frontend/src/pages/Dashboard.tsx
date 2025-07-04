@@ -19,7 +19,7 @@ const Dashboard: React.FC = () => {
 
   const loadRooms = async () => {
     try {
-      const roomsData = await roomAPI.getAll();
+      const roomsData = await roomAPI.getByParent(); // Get root-level rooms only
       setRooms(roomsData);
     } catch (error: any) {
       toast.error('Failed to load rooms');
@@ -63,7 +63,7 @@ const Dashboard: React.FC = () => {
   };
 
   const handleRoomClick = (roomId: string) => {
-    navigate(`/notes/${roomId}`);
+    navigate(`/room/${roomId}`);
   };
 
   if (loading) {

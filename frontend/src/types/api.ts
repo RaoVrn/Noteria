@@ -9,6 +9,8 @@ export interface Room {
   _id: string;
   name: string;
   user: string;
+  parentRoom?: string; // For subrooms
+  path?: string[]; // Array of parent room IDs for breadcrumb
   createdAt: string;
   updatedAt: string;
 }
@@ -47,6 +49,11 @@ export interface ApiError {
 
 // Room API
 export interface CreateRoomRequest {
+  name: string;
+  parentRoom?: string; // For creating subrooms
+}
+
+export interface UpdateRoomRequest {
   name: string;
 }
 

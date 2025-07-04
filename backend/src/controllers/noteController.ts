@@ -14,10 +14,15 @@ export const createNote = async (req: AuthenticatedRequest, res: Response) => {
       return res.status(401).json({ error: 'User not authenticated' });
     }
 
+    // Validate required fields
+    if (!roomId) {
+      return res.status(400).json({ error: 'Room ID is required' });
+    }
+
     // Create new note
     const note = new Note({
-      title,
-      content,
+      title: title || 'Untitled Note',
+      content: content || '',
       room: roomId,
       user: userId
     });
@@ -94,10 +99,10 @@ export const updateNote = async (req: AuthenticatedRequest, res: Response) => {
     const updatedNote = await Note.findByIdAndUpdate(
       noteId,
       { 
-        title: title || note.title, 
+        title: title !== undefined ? title : note.title, 
         content: content !== undefined ? content : note.content 
       },
-      { new: true }
+      { new: true, runValidators: true }
     );
 
     res.json({

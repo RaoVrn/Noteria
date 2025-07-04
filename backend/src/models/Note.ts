@@ -21,7 +21,7 @@ const NoteSchema: Schema = new Schema(
     },
     content: {
       type: String,
-      required: [true, 'Note content is required']
+      default: ''
     },
     room: {
       type: Schema.Types.ObjectId,

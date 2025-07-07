@@ -4,6 +4,7 @@ import { ArrowLeft, Save, Plus, Trash2, FileText } from 'lucide-react';
 import { noteAPI, roomAPI } from '../services/api';
 import { Note, Room } from '../types/api';
 import toast from 'react-hot-toast';
+import SimpleRichTextEditor from '../components/SimpleRichTextEditor';
 
 const NotesPage: React.FC = () => {
   const { roomId } = useParams<{ roomId: string }>();
@@ -278,12 +279,30 @@ const NotesPage: React.FC = () => {
                   )}
                 </div>
                 
-                <div className="flex-1 p-4">
-                  <textarea
-                    value={content}
-                    onChange={(e) => setContent(e.target.value)}
-                    placeholder="Start writing your note..."
-                    className="w-full h-full resize-none bg-transparent border-none focus:outline-none text-gray-900 placeholder-gray-400"
+                <div className="flex-1">
+                  <SimpleRichTextEditor
+                    content={content}
+                    onChange={setContent}
+                    onSave={(newContent) => {
+                      setContent(newContent);
+                      handleSaveNote();
+                    }}
+                    placeholder="Start writing your note... Use # for headings, * for lists, and explore the toolbar for more features!"
+                    className="h-full border-none"
+                    onNavigateUp={() => {
+                      const currentIndex = notes.findIndex(n => n._id === selectedNote._id);
+                      if (currentIndex > 0) {
+                        setSelectedNote(notes[currentIndex - 1]);
+                      }
+                    }}
+                    onNavigateDown={() => {
+                      const currentIndex = notes.findIndex(n => n._id === selectedNote._id);
+                      if (currentIndex < notes.length - 1) {
+                        setSelectedNote(notes[currentIndex + 1]);
+                      }
+                    }}
+                    hasPreviousNote={notes.findIndex(n => n._id === selectedNote._id) > 0}
+                    hasNextNote={notes.findIndex(n => n._id === selectedNote._id) < notes.length - 1}
                   />
                 </div>
               </div>

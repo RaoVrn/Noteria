@@ -1,5 +1,5 @@
 import axios from 'axios';
-import {
+import type {
   AuthResponse,
   LoginRequest,
   SignupRequest,
@@ -100,6 +100,11 @@ export const roomAPI = {
 
 // Note API
 export const noteAPI = {
+  getAll: async (): Promise<Note[]> => {
+    const response = await api.get('/notes');
+    return response.data.notes;
+  },
+
   getByRoom: async (roomId: string): Promise<Note[]> => {
     const response = await api.get(`/notes/room/${roomId}`);
     return response.data.notes;

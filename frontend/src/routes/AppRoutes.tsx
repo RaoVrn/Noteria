@@ -6,6 +6,7 @@ import Signup from '../pages/Signup';
 import Dashboard from '../pages/Dashboard';
 import RoomView from '../pages/RoomView';
 import NotesPage from '../pages/NotesPage';
+import ActivityPage from '../pages/ActivityPage';
 import ProfileSettings from '../pages/ProfileSettings';
 import AccountSettings from '../pages/AccountSettings';
 import ProtectedRoute from '../components/ProtectedRoute';
@@ -46,6 +47,14 @@ const AppRoutes: React.FC = () => {
         element={
           <ProtectedRoute>
             <NotesPage />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/activity" 
+        element={
+          <ProtectedRoute>
+            <ActivityPage />
           </ProtectedRoute>
         } 
       />

@@ -5,7 +5,6 @@ import { roomAPI, noteAPI } from '../services/api';
 import { 
   Settings, 
   Database, 
-  Trash2, 
   AlertTriangle, 
   Activity,
   Calendar,

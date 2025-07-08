@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { AuthContext } from './auth';
 import { authAPI } from '../services/api';
-import { User } from '../types/api';
+import type { User } from '../types/api';
 import toast from 'react-hot-toast';
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {

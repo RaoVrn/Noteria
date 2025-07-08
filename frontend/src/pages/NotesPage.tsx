@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Save, Plus, Trash2, FileText } from 'lucide-react';
 import { noteAPI, roomAPI } from '../services/api';
-import { Note, Room } from '../types/api';
+import type { Note, Room } from '../types/api';
 import toast from 'react-hot-toast';
 import SimpleRichTextEditor from '../components/SimpleRichTextEditor';
 

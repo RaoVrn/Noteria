@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus, FolderPlus, FileText, Trash2, Edit3, Folder, ChevronRight, Home } from 'lucide-react';
+import { FolderPlus, FileText, Trash2, Edit3, Folder, ChevronRight, Home } from 'lucide-react';
 import { roomAPI, noteAPI } from '../services/api';
-import { Room, Note } from '../types/api';
+import type { Room, Note } from '../types/api';
 import toast from 'react-hot-toast';
 
 const RoomView: React.FC = () => {

@@ -104,7 +104,7 @@ const ProfileSettings: React.FC = () => {
       return;
     }
     // TODO: Implement API call to update password when backend supports it
-    toast.info('Password change not yet implemented in backend');
+    toast.error('Password change not yet implemented in backend');
     setFormData(prev => ({
       ...prev,
       currentPassword: '',

@@ -17,11 +17,9 @@ import {
   AlignLeft,
   AlignCenter,
   AlignRight,
-  Palette,
   Type,
   Highlighter,
   Minus,
-  Upload,
   FileText,
   ChevronUp,
   ChevronDown,
@@ -34,26 +32,14 @@ import {
   Outdent,
   Subscript,
   Superscript,
-  Settings,
   MoreHorizontal,
   Zap,
   Grid3X3,
-  Hash,
   Pen,
   PenTool,
   Eraser,
   Globe,
-  Square,
-  Circle,
-  Eye,
-  EyeOff,
-  Download,
-  CheckSquare,
-  Calendar,
-  Clock,
-  MapPin,
-  Smile,
-  Languages
+  Smile
 } from 'lucide-react';
 
 interface SimpleRichTextEditorProps {
@@ -86,8 +72,6 @@ const SimpleRichTextEditor: React.FC<SimpleRichTextEditorProps> = ({
   const [showHighlightPicker, setShowHighlightPicker] = useState(false);
   const [showAdvancedMenu, setShowAdvancedMenu] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [selectedImage, setSelectedImage] = useState<HTMLImageElement | null>(null);
-  const [isResizing, setIsResizing] = useState(false);
   
   // Drawing state
   const [isDrawingMode, setIsDrawingMode] = useState(false);
@@ -103,12 +87,10 @@ const SimpleRichTextEditor: React.FC<SimpleRichTextEditorProps> = ({
   
   // Additional features
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [showInsertMenu, setShowInsertMenu] = useState(false);
   const [wordCount, setWordCount] = useState(0);
   const [readingTime, setReadingTime] = useState(0);
   
   const editorRef = useRef<HTMLDivElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
   const drawingCanvasRef = useRef<HTMLCanvasElement>(null);
 
   // Close dropdowns when clicking outside - simplified approach
@@ -333,13 +315,13 @@ const SimpleRichTextEditor: React.FC<SimpleRichTextEditorProps> = ({
     input.click();
   };
 
-  const addImageFromUrl = () => {
-    const url = prompt('Enter image URL:');
-    if (url) {
-      const id = `img-${Date.now()}`;
-      insertImage(url, id);
-    }
-  };
+  // const addImageFromUrl = () => {
+  //   const url = prompt('Enter image URL:');
+  //   if (url) {
+  //     const id = `img-${Date.now()}`;
+  //     insertImage(url, id);
+  //   }
+  // };
 
   const insertImage = (src: string, id: string) => {
     insertHTML(`
@@ -364,7 +346,7 @@ const SimpleRichTextEditor: React.FC<SimpleRichTextEditorProps> = ({
     setTimeout(() => setupImageInteraction(id), 100);
   };
 
-  const setupImageInteraction = (id: string) => {
+  const setupImageInteraction = (_id: string) => {
     (window as any).selectImage = (imageId: string) => {
       // Hide all other resize handles
       document.querySelectorAll('.image-resize-handles').forEach(handle => {
@@ -394,7 +376,6 @@ const SimpleRichTextEditor: React.FC<SimpleRichTextEditorProps> = ({
       if (!img) return;
 
       const startX = event.clientX;
-      const startY = event.clientY;
       const startWidth = img.offsetWidth;
       const startHeight = img.offsetHeight;
       const aspectRatio = startWidth / startHeight;

@@ -1404,157 +1404,155 @@ const Dashboard: React.FC = () => {
           )}
         </div>
 
-        {/* Enhanced Footer with Real Data */}
+        {/* Knowledge Insights Footer */}
         <div className="mt-12 border-t border-gray-200 pt-8">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
-            {/* Usage Stats */}
+            {/* Knowledge Metrics */}
             <div>
-              <h4 className="font-semibold text-gray-900 mb-3">Usage</h4>
-              <div className="space-y-2 text-sm text-gray-600">
+              <h4 className="font-semibold text-gray-900 mb-3">Knowledge Insights</h4>
+              <div className="space-y-1 text-sm text-gray-600">
                 <div className="flex justify-between">
-                  <span>Total Rooms:</span>
-                  <span className="font-medium">{stats.totalRooms}</span>
+                  <span>Content Created:</span>
+                  <span className="font-medium text-blue-600">{stats.totalWords > 0 ? `${stats.totalWords.toLocaleString()} words` : '0 words'}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Total Notes:</span>
-                  <span className="font-medium">{stats.totalNotes}</span>
+                  <span>Active Workspaces:</span>
+                  <span className="font-medium text-green-600">{stats.popularRooms.filter(r => r.noteCount > 0).length || 0}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Active Today:</span>
-                  <span className="font-medium">{stats.todayRooms + stats.todayNotes}</span>
+                  <span>Learning Streak:</span>
+                  <span className="font-medium text-purple-600">{stats.streakDays} days</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>This Week:</span>
-                  <span className="font-medium">{stats.weeklyActivity.reduce((a, b) => a + b, 0)}</span>
+                  <span>Productivity Score:</span>
+                  <span className="font-medium text-orange-600">{stats.productivityScore}/100</span>
                 </div>
               </div>
             </div>
 
-            {/* Quick Links */}
+            {/* Navigation Hub */}
             <div>
-              <h4 className="font-semibold text-gray-900 mb-3">Quick Links</h4>
-              <div className="space-y-2 text-sm">
+              <h4 className="font-semibold text-gray-900 mb-3">Navigation Hub</h4>
+              <div className="space-y-1 text-sm">
                 <button
-                  onClick={() => {
-                    if (stats.recentRooms.length > 0) {
-                      navigate(`/room/${String(stats.recentRooms[0]._id)}`);
-                    } else {
-                      toast.error('No rooms available. Create your first room!');
-                    }
-                  }}
+                  onClick={() => navigate('/activity')}
                   className="block text-gray-600 hover:text-indigo-600 transition-colors"
                 >
-                  → All Notes
+                  📊 Activity Timeline
                 </button>
                 <button
                   onClick={() => setShowCreateModal(true)}
                   className="block text-gray-600 hover:text-indigo-600 transition-colors"
                 >
-                  → New Room
+                  ➕ Create Workspace
                 </button>
                 <button
                   onClick={() => {
-                    toast('⚙️ Profile Settings feature coming soon!', {
-                      icon: '⚙️',
-                      duration: 4000,
-                    });
+                    if (stats.recentNotes.length > 0) {
+                      navigate(`/notes/${String(stats.recentNotes[0].room)}?noteId=${String(stats.recentNotes[0]._id)}`);
+                    } else {
+                      toast('No recent notes found');
+                    }
                   }}
                   className="block text-gray-600 hover:text-indigo-600 transition-colors"
                 >
-                  → Profile Settings
+                  📝 Latest Note
                 </button>
                 <button
                   onClick={() => {
-                    toast('📤 Export Data feature coming soon!', {
-                      icon: '📤',
-                      duration: 4000,
-                    });
+                    const searchTerm = prompt('Search your knowledge base:');
+                    if (searchTerm) {
+                      toast.success(`Searching for: "${searchTerm}"`);
+                    }
                   }}
                   className="block text-gray-600 hover:text-indigo-600 transition-colors"
                 >
-                  → Export Data
+                  🔍 Search Knowledge
                 </button>
               </div>
             </div>
 
-            {/* System Info */}
+            {/* Platform Status */}
             <div>
-              <h4 className="font-semibold text-gray-900 mb-3">System</h4>
-              <div className="space-y-2 text-sm text-gray-600">
+              <h4 className="font-semibold text-gray-900 mb-3">Platform Status</h4>
+              <div className="space-y-1 text-sm text-gray-600">
                 <div className="flex justify-between">
                   <span>Version:</span>
-                  <span className="font-medium">v1.0</span>
+                  <span className="font-medium">v1.0.2</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Uptime:</span>
+                  <span>Reliability:</span>
                   <span className="font-medium text-green-600">99.9%</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Last Sync:</span>
-                  <span className="font-medium">Just now</span>
+                  <span>Data Sync:</span>
+                  <span className="font-medium text-blue-600">Real-time</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Storage:</span>
+                  <span>Storage Used:</span>
                   <span className="font-medium">{formatStorageSize(stats.storageUsed)}</span>
                 </div>
               </div>
             </div>
 
-            {/* Community & Support */}
+            {/* Growth & Support */}
             <div>
-              <h4 className="font-semibold text-gray-900 mb-3">Community</h4>
-              <div className="space-y-2 text-sm">
+              <h4 className="font-semibold text-gray-900 mb-3">Growth & Support</h4>
+              <div className="space-y-1 text-sm">
                 <button
                   onClick={() => {
-                    toast('📝 Give Feedback:\nHelp us improve Noteria by sharing your thoughts!', {
-                      duration: 5000,
+                    toast('� Share your feedback to help us improve Noteria!', {
+                      duration: 4000,
                     });
                   }}
                   className="block text-gray-600 hover:text-indigo-600 transition-colors"
                 >
-                  → Give Feedback
+                  💡 Share Feedback
                 </button>
                 <button
                   onClick={() => {
-                    toast('📚 Documentation:\nLearn how to make the most of Noteria!', {
-                      duration: 5000,
+                    toast('� Learn advanced features and tips!', {
+                      duration: 4000,
                     });
                   }}
                   className="block text-gray-600 hover:text-indigo-600 transition-colors"
                 >
-                  → Documentation
+                  📚 Learn More
                 </button>
                 <button
                   onClick={() => {
-                    toast('🆘 Support:\nNeed help? We\'re here for you!', {
-                      duration: 5000,
+                    toast('🤝 Join our community of knowledge workers!', {
+                      duration: 4000,
                     });
                   }}
                   className="block text-gray-600 hover:text-indigo-600 transition-colors"
                 >
-                  → Support
+                  🌟 Join Community
                 </button>
                 <span className="block text-gray-500 text-xs pt-2">
-                  Made with ❤️ for knowledge workers
+                  Empowering minds since 2025
                 </span>
               </div>
             </div>
           </div>
           
-          {/* Bottom Bar */}
+          {/* Knowledge Worker Bottom Bar */}
           <div className="mt-8 pt-6 border-t border-gray-200 flex flex-col sm:flex-row justify-between items-center">
             <div className="flex items-center text-sm text-gray-500">
-              <span>© 2025 Noteria. Made with </span>
-              <span className="text-red-500 mx-1">♥</span>
-              <span>for knowledge workers.</span>
+              <span>© 2025 Noteria. Where ideas converge and knowledge thrives.</span>
             </div>
-            <div className="flex items-center space-x-4 mt-4 sm:mt-0">
+            <div className="flex items-center space-x-6 mt-4 sm:mt-0">
               <div className="flex items-center text-xs text-gray-500">
-                <span>Last updated: {new Date().toLocaleDateString()}</span>
+                <span>Updated: {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
               </div>
               <div className="flex items-center space-x-2">
                 <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                 <span className="text-xs text-green-600 font-medium">All systems operational</span>
+              </div>
+              <div className="flex items-center text-xs text-gray-500">
+                <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent font-semibold">
+                  {stats.achievements.length > 0 ? `🏆 ${stats.achievements[0]}` : '🚀 Keep growing!'}
+                </span>
               </div>
             </div>
           </div>

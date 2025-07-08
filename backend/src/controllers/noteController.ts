@@ -79,6 +79,37 @@ export const getNotes = async (req: AuthenticatedRequest, res: Response) => {
   }
 };
 
+export const getAllNotes = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = req.userId;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    // Get all notes for the authenticated user across all rooms
+    const notes = await Note.find({ user: userId })
+      .populate('room', 'name')
+      .sort({ createdAt: -1 });
+
+    res.json({
+      message: 'All notes retrieved successfully',
+      notes: notes.map(note => ({
+        _id: note._id,
+        title: note.title,
+        content: note.content,
+        room: note.room,
+        user: note.user,
+        createdAt: note.createdAt,
+        updatedAt: note.updatedAt
+      }))
+    });
+  } catch (error) {
+    console.error('Get all notes error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
 export const updateNote = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { noteId } = req.params;

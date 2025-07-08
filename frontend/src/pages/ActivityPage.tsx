@@ -1,138 +1,142 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  Activity, 
-  FileText, 
-  Folder, 
-  Clock, 
-  ArrowLeft,
-  Calendar,
-  TrendingUp,
-  BarChart3,
-  Filter
+  Brain, 
+  Zap, 
+  Target, 
+  ChevronLeft,
+  Sparkles,
+  Flame,
+  BookOpen,
+  LineChart,
+  Award
 } from 'lucide-react';
 import { roomAPI, noteAPI } from '../services/api';
 import type { Room, Note } from '../types/api';
-import { useAuth } from '../hooks/useAuth';
 import toast from 'react-hot-toast';
 
 const ActivityPage: React.FC = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const [rooms, setRooms] = useState<Room[]>([]);
-  const [notes, setNotes] = useState<Note[]>([]);
+  const [workspaces, setWorkspaces] = useState<Room[]>([]);
+  const [documents, setDocuments] = useState<Note[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<'all' | 'rooms' | 'notes'>('all');
+  const [viewMode, setViewMode] = useState<'insights' | 'progress' | 'achievements'>('insights');
 
-  // Helper function to format time ago
-  const formatTimeAgo = (date: Date): string => {
+  // Helper function to calculate learning momentum
+  const calculateMomentum = (date: Date): string => {
     const now = new Date();
-    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
     
-    if (diffInSeconds < 60) return 'just now';
-    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
-    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
-    if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d ago`;
-    return `${Math.floor(diffInSeconds / 604800)}w ago`;
+    if (diffInHours < 1) return 'blazing hot';
+    if (diffInHours < 6) return 'very active';
+    if (diffInHours < 24) return 'recently active';
+    if (diffInHours < 168) return 'this week';
+    return 'earlier';
   };
 
   useEffect(() => {
-    const loadActivity = async () => {
+    const loadKnowledgeData = async () => {
       try {
         setLoading(true);
         
-        // Load rooms and notes in parallel
-        const [roomsData, notesData] = await Promise.all([
+        // Load workspaces and documents
+        const [workspaceData, documentData] = await Promise.all([
           roomAPI.getAll(),
           noteAPI.getAll()
         ]);
         
-        setRooms(roomsData);
-        setNotes(notesData);
+        setWorkspaces(workspaceData);
+        setDocuments(documentData);
         
       } catch (error) {
-        console.error('Error loading activity:', error);
-        toast.error('Failed to load activity data');
+        console.error('Error loading knowledge data:', error);
+        toast.error('Failed to load your knowledge journey');
       } finally {
         setLoading(false);
       }
     };
 
-    loadActivity();
+    loadKnowledgeData();
   }, []);
 
-  // Combine and sort all activity
-  const allActivity = React.useMemo(() => {
-    const activities: Array<{
+  // Transform data into knowledge insights
+  const knowledgeInsights = React.useMemo(() => {
+    const insights: Array<{
       id: string;
-      type: 'room' | 'note';
+      type: 'creation' | 'breakthrough' | 'milestone';
       title: string;
-      subtitle?: string;
+      description: string;
+      momentum: string;
       createdAt: Date;
-      roomId?: string;
-      noteId?: string;
-      room?: Room;
+      impact: 'high' | 'medium' | 'low';
+      workspaceId?: string;
+      documentId?: string;
     }> = [];
 
-    // Add rooms
-    if (filter === 'all' || filter === 'rooms') {
-      rooms.forEach(room => {
-        activities.push({
-          id: room._id,
-          type: 'room',
-          title: room.name,
-          subtitle: 'Room created',
-          createdAt: new Date(room.createdAt),
-          roomId: room._id
+    // Add workspace insights
+    if (viewMode === 'insights' || viewMode === 'progress') {
+      workspaces.forEach(workspace => {
+        insights.push({
+          id: workspace._id,
+          type: 'creation',
+          title: `Knowledge Space: ${workspace.name}`,
+          description: 'New learning environment established',
+          momentum: calculateMomentum(new Date(workspace.createdAt)),
+          createdAt: new Date(workspace.createdAt),
+          impact: 'high',
+          workspaceId: workspace._id
         });
       });
     }
 
-    // Add notes
-    if (filter === 'all' || filter === 'notes') {
-      notes.forEach(note => {
-        const room = rooms.find(r => String(r._id) === String(note.room));
-        activities.push({
-          id: note._id,
-          type: 'note',
-          title: note.title || 'Untitled Note',
-          subtitle: `Note created in ${room?.name || 'Unknown Room'}`,
-          createdAt: new Date(note.createdAt),
-          roomId: note.room,
-          noteId: note._id,
-          room
+    // Add document insights
+    if (viewMode === 'insights' || viewMode === 'achievements') {
+      documents.forEach(document => {
+        const workspace = workspaces.find(w => String(w._id) === String(document.room));
+        insights.push({
+          id: document._id,
+          type: 'breakthrough',
+          title: document.title || 'Knowledge Capture',
+          description: `Documented in ${workspace?.name || 'Learning Space'}`,
+          momentum: calculateMomentum(new Date(document.createdAt)),
+          createdAt: new Date(document.createdAt),
+          impact: 'medium',
+          workspaceId: document.room,
+          documentId: document._id
         });
       });
     }
 
-    // Sort by creation date (newest first)
-    return activities.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-  }, [rooms, notes, filter]);
+    // Sort by recency and impact
+    return insights.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  }, [workspaces, documents, viewMode]);
 
-  const stats = {
-    totalRooms: rooms.length,
-    totalNotes: notes.length,
-    todayActivity: allActivity.filter(item => {
+  const learningMetrics = {
+    totalWorkspaces: workspaces.length,
+    totalDocuments: documents.length,
+    recentActivity: knowledgeInsights.filter(item => {
       const today = new Date();
       const itemDate = item.createdAt;
       return itemDate.toDateString() === today.toDateString();
     }).length,
-    thisWeekActivity: allActivity.filter(item => {
+    weeklyProgress: knowledgeInsights.filter(item => {
       const now = new Date();
       const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
       return item.createdAt >= weekAgo;
-    }).length
+    }).length,
+    momentum: knowledgeInsights.length > 0 ? 
+      calculateMomentum(knowledgeInsights[0].createdAt) : 'getting started'
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-orange-50">
         <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
           <div className="animate-pulse">
-            <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
+            <div className="h-8 bg-gradient-to-r from-purple-200 to-pink-200 rounded w-1/3 mb-6"></div>
             <div className="space-y-4">
               {[1, 2, 3, 4, 5].map(i => (
-                <div key={i} className="h-16 bg-gray-200 rounded-lg"></div>
+                <div key={i} className="h-20 bg-gradient-to-r from-purple-100 to-orange-100 rounded-xl"></div>
               ))}
             </div>
           </div>
@@ -142,190 +146,222 @@ const ActivityPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
-      <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-        {/* Header */}
+    <>
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-orange-50">
+        <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+        {/* Knowledge Journey Header */}
         <div className="mb-8">
           <div className="flex items-center space-x-4 mb-6">
             <button
               onClick={() => navigate('/dashboard')}
-              className="flex items-center justify-center w-10 h-10 rounded-lg bg-white/80 backdrop-blur-sm border border-white/20 hover:bg-white/90 transition-colors"
+              className="flex items-center justify-center w-12 h-12 rounded-xl bg-white/90 backdrop-blur-sm border border-white/30 hover:bg-white transition-colors shadow-lg"
             >
-              <ArrowLeft className="h-5 w-5 text-gray-600" />
+              <ChevronLeft className="h-6 w-6 text-gray-700" />
             </button>
             <div>
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-blue-600 bg-clip-text text-transparent">
-                Activity Timeline
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-orange-600 bg-clip-text text-transparent">
+                Knowledge Journey
               </h1>
-              <p className="text-gray-600 mt-1">
-                Your complete activity history across all rooms and notes
+              <p className="text-gray-600 mt-2 text-lg">
+                Track your learning evolution and intellectual growth
               </p>
             </div>
           </div>
 
-          {/* Stats Overview */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-sm border border-white/20 p-4">
+          {/* Learning Momentum Dashboard */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg border border-white/30 p-6">
               <div className="flex items-center">
-                <div className="p-2 bg-indigo-100 rounded-lg">
-                  <Activity className="h-5 w-5 text-indigo-600" />
+                <div className="p-3 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl">
+                  <Brain className="h-6 w-6 text-white" />
                 </div>
-                <div className="ml-3">
-                  <p className="text-sm font-medium text-gray-600">Total Activity</p>
-                  <p className="text-xl font-bold text-gray-900">{allActivity.length}</p>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Knowledge Spaces</p>
+                  <p className="text-2xl font-bold text-gray-900">{learningMetrics.totalWorkspaces}</p>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-sm border border-white/20 p-4">
+            <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg border border-white/30 p-6">
               <div className="flex items-center">
-                <div className="p-2 bg-green-100 rounded-lg">
-                  <Calendar className="h-5 w-5 text-green-600" />
+                <div className="p-3 bg-gradient-to-r from-pink-500 to-orange-500 rounded-xl">
+                  <BookOpen className="h-6 w-6 text-white" />
                 </div>
-                <div className="ml-3">
-                  <p className="text-sm font-medium text-gray-600">Today</p>
-                  <p className="text-xl font-bold text-gray-900">{stats.todayActivity}</p>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Documents</p>
+                  <p className="text-2xl font-bold text-gray-900">{learningMetrics.totalDocuments}</p>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-sm border border-white/20 p-4">
+            <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg border border-white/30 p-6">
               <div className="flex items-center">
-                <div className="p-2 bg-purple-100 rounded-lg">
-                  <TrendingUp className="h-5 w-5 text-purple-600" />
+                <div className="p-3 bg-gradient-to-r from-orange-500 to-red-500 rounded-xl">
+                  <Flame className="h-6 w-6 text-white" />
                 </div>
-                <div className="ml-3">
-                  <p className="text-sm font-medium text-gray-600">This Week</p>
-                  <p className="text-xl font-bold text-gray-900">{stats.thisWeekActivity}</p>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Today's Flow</p>
+                  <p className="text-2xl font-bold text-gray-900">{learningMetrics.recentActivity}</p>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-sm border border-white/20 p-4">
+            <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg border border-white/30 p-6">
               <div className="flex items-center">
-                <div className="p-2 bg-orange-100 rounded-lg">
-                  <BarChart3 className="h-5 w-5 text-orange-600" />
+                <div className="p-3 bg-gradient-to-r from-green-500 to-teal-500 rounded-xl">
+                  <Zap className="h-6 w-6 text-white" />
                 </div>
-                <div className="ml-3">
-                  <p className="text-sm font-medium text-gray-600">Active Today</p>
-                  <p className="text-xl font-bold text-gray-900">{user?.email ? 'You' : '0'}</p>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Weekly Momentum</p>
+                  <p className="text-2xl font-bold text-gray-900">{learningMetrics.weeklyProgress}</p>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Filter Controls */}
-          <div className="flex items-center space-x-2 mb-6">
-            <Filter className="h-5 w-5 text-gray-500" />
-            <span className="text-sm font-medium text-gray-700">Filter:</span>
+          {/* View Mode Selector */}
+          <div className="flex items-center space-x-3 mb-8">
+            <Sparkles className="h-5 w-5 text-purple-600" />
+            <span className="text-sm font-medium text-gray-700">Journey View:</span>
             <div className="flex space-x-2">
-              {(['all', 'rooms', 'notes'] as const).map((filterType) => (
+              {(['insights', 'progress', 'achievements'] as const).map((mode) => (
                 <button
-                  key={filterType}
-                  onClick={() => setFilter(filterType)}
-                  className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
-                    filter === filterType
-                      ? 'bg-indigo-600 text-white'
-                      : 'bg-white/80 text-gray-600 hover:bg-white/90'
+                  key={mode}
+                  onClick={() => setViewMode(mode)}
+                  className={`px-4 py-2 text-sm font-medium rounded-xl transition-all duration-300 ${
+                    viewMode === mode
+                      ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg'
+                      : 'bg-white/70 text-gray-600 hover:bg-white/90'
                   }`}
                 >
-                  {filterType === 'all' ? 'All Activity' : filterType === 'rooms' ? 'Rooms Only' : 'Notes Only'}
+                  {mode === 'insights' ? '🧠 Insights' : mode === 'progress' ? '📈 Progress' : '🏆 Achievements'}
                 </button>
               ))}
             </div>
           </div>
         </div>
 
-        {/* Activity Timeline */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-lg border border-white/20 p-6">
-          <div className="flex items-center space-x-2 mb-6">
-            <Clock className="h-5 w-5 text-indigo-600" />
-            <h2 className="text-lg font-semibold text-gray-900">Activity Timeline</h2>
-            <span className="text-sm text-gray-500">({allActivity.length} items)</span>
+        {/* Knowledge Journey Timeline */}
+        <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg border border-white/30 p-8">
+          <div className="flex items-center space-x-3 mb-8">
+            <Target className="h-6 w-6 text-purple-600" />
+            <h2 className="text-2xl font-semibold text-gray-900">Learning Timeline</h2>
+            <span className="text-sm text-gray-500 bg-purple-100 px-3 py-1 rounded-full">
+              {knowledgeInsights.length} milestones
+            </span>
           </div>
 
-          {allActivity.length > 0 ? (
-            <div className="space-y-3">
-              {allActivity.map((item) => (
+          {knowledgeInsights.length > 0 ? (
+            <div className="space-y-6">
+              {knowledgeInsights.map((insight, index) => (
                 <div 
-                  key={item.id}
+                  key={insight.id}
                   onClick={() => {
-                    if (item.type === 'room') {
-                      navigate(`/room/${String(item.roomId)}`);
+                    if (insight.type === 'creation') {
+                      navigate(`/room/${String(insight.workspaceId)}`);
                     } else {
-                      navigate(`/notes/${String(item.roomId)}?noteId=${String(item.noteId)}`);
+                      navigate(`/notes/${String(insight.workspaceId)}?noteId=${String(insight.documentId)}`);
                     }
                   }}
-                  className={`flex items-start space-x-3 p-4 rounded-lg transition-colors cursor-pointer ${
-                    item.type === 'room'
-                      ? 'bg-blue-50 hover:bg-blue-100 border-l-4 border-blue-400'
-                      : 'bg-green-50 hover:bg-green-100 border-l-4 border-green-400'
+                  className={`relative flex items-start space-x-4 p-6 rounded-2xl transition-all duration-300 cursor-pointer transform hover:-translate-y-1 ${
+                    insight.type === 'creation'
+                      ? 'bg-gradient-to-r from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 border-l-4 border-purple-400'
+                      : insight.type === 'breakthrough'
+                      ? 'bg-gradient-to-r from-pink-50 to-orange-50 hover:from-pink-100 hover:to-orange-100 border-l-4 border-pink-400'
+                      : 'bg-gradient-to-r from-orange-50 to-yellow-50 hover:from-orange-100 hover:to-yellow-100 border-l-4 border-orange-400'
                   }`}
                 >
                   <div className="flex-shrink-0">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                      item.type === 'room' ? 'bg-blue-500' : 'bg-green-500'
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                      insight.type === 'creation' 
+                        ? 'bg-gradient-to-r from-purple-500 to-pink-500' 
+                        : insight.type === 'breakthrough'
+                        ? 'bg-gradient-to-r from-pink-500 to-orange-500'
+                        : 'bg-gradient-to-r from-orange-500 to-yellow-500'
                     }`}>
-                      {item.type === 'room' ? (
-                        <Folder className="h-5 w-5 text-white" />
+                      {insight.type === 'creation' ? (
+                        <Brain className="h-6 w-6 text-white" />
+                      ) : insight.type === 'breakthrough' ? (
+                        <Zap className="h-6 w-6 text-white" />
                       ) : (
-                        <FileText className="h-5 w-5 text-white" />
+                        <Award className="h-6 w-6 text-white" />
                       )}
                     </div>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center space-x-2 mb-1">
-                      <p className="text-sm font-medium text-gray-900 truncate">
-                        {item.title}
-                      </p>
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                        item.type === 'room'
-                          ? 'bg-blue-100 text-blue-800'
-                          : 'bg-green-100 text-green-800'
+                    <div className="flex items-center space-x-3 mb-2">
+                      <h3 className="text-lg font-semibold text-gray-900 truncate">
+                        {insight.title}
+                      </h3>
+                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                        insight.type === 'creation'
+                          ? 'bg-purple-100 text-purple-800'
+                          : insight.type === 'breakthrough'
+                          ? 'bg-pink-100 text-pink-800'
+                          : 'bg-orange-100 text-orange-800'
                       }`}>
-                        {item.type === 'room' ? 'Room' : 'Note'}
+                        {insight.type === 'creation' ? '🧠 Creation' : insight.type === 'breakthrough' ? '⚡ Breakthrough' : '🏆 Milestone'}
+                      </span>
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-bold ${
+                        insight.impact === 'high' ? 'bg-red-100 text-red-700' :
+                        insight.impact === 'medium' ? 'bg-yellow-100 text-yellow-700' :
+                        'bg-green-100 text-green-700'
+                      }`}>
+                        {insight.momentum}
                       </span>
                     </div>
-                    <p className="text-xs text-gray-500">
-                      {item.subtitle} • {formatTimeAgo(item.createdAt)}
+                    <p className="text-sm text-gray-600 mb-3">
+                      {insight.description}
                     </p>
-                    <p className="text-xs text-gray-400 mt-1">
-                      {item.createdAt.toLocaleDateString('en-US', {
-                        weekday: 'long',
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
-                    </p>
+                    <div className="flex items-center space-x-4 text-xs text-gray-500">
+                      <span>
+                        📅 {insight.createdAt.toLocaleDateString('en-US', {
+                          weekday: 'long',
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </span>
+                      <span className="flex items-center">
+                        <LineChart className="h-3 w-3 mr-1" />
+                        Impact: {insight.impact}
+                      </span>
+                    </div>
                   </div>
+                  {/* Timeline connector for all but last item */}
+                  {index < knowledgeInsights.length - 1 && (
+                    <div className="absolute left-10 top-16 w-0.5 h-6 bg-gradient-to-b from-purple-300 to-pink-300"></div>
+                  )}
                 </div>
               ))}
             </div>
           ) : (
-            <div className="text-center py-12">
-              <Activity className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No Activity Yet</h3>
-              <p className="text-gray-500 mb-6">
-                {filter === 'all' 
-                  ? 'Create your first room or note to see activity here'
-                  : filter === 'rooms'
-                  ? 'Create your first room to see room activity'
-                  : 'Create your first note to see note activity'
+            <div className="text-center py-16">
+              <Brain className="h-16 w-16 text-gray-400 mx-auto mb-6" />
+              <h3 className="text-xl font-medium text-gray-900 mb-3">Your Knowledge Journey Awaits</h3>
+              <p className="text-gray-500 mb-8 max-w-md mx-auto">
+                {viewMode === 'insights' 
+                  ? 'Start creating knowledge spaces and documents to see your learning insights here'
+                  : viewMode === 'progress'
+                  ? 'Begin your learning journey to track your progress and growth'
+                  : 'Unlock achievements by consistently building your knowledge base'
                 }
               </p>
               <button
                 onClick={() => navigate('/dashboard')}
-                className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors"
+                className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-sm font-medium rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all duration-300 shadow-lg transform hover:-translate-y-0.5"
               >
-                Go to Dashboard
+                <Sparkles className="h-5 w-5 mr-2" />
+                Start Your Journey
               </button>
             </div>
           )}
         </div>
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 
